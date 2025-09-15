@@ -35,7 +35,7 @@ def load_pairs(filename: str) -> List[Tuple[str, str]]:
             line = raw.strip()
             if not line:
                 continue
-            parts = line.split()
+            parts = line.split(' ')
             if len(parts) != 2:
                 raise ValueError(
                     f"Line {lineno}: expected 2 items, got {len(parts)} in {raw!r}"

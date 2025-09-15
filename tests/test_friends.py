@@ -7,7 +7,7 @@ import myfriends
 import pytest
 
 # Expected solutions from a simplified test example
-simple_file = 'myfriends.txt'
+simple_file = '../myfriends.txt'
 simple_file_len = 58
 comment_length = "function returned list of incorrect length"
 
