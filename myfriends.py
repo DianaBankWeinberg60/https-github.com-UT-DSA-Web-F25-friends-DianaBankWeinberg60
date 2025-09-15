@@ -9,7 +9,7 @@ Notes:
   including testing of "edge cases"
 """
 
-from py_friends.friends import Friends
+import py_friends.friends
 
 """
 ************** READ THIS ***************
@@ -18,164 +18,112 @@ from py_friends.friends import Friends
 ************** READ THIS ***************
 ************** READ THIS ***************
 
-If you worked in a group on this project, please type the EIDs of your groupmates below (do not include yourself).
+If you worked in a group on this projectpairs[:5], please type the EIDs of your groupmates below (do not include yourself).
 Leave it as TODO otherwise.
 Groupmate 1: TODO
 Groupmate 2: TODO
 """
+from typing import List, Tuple, Dict, Set, Iterator
+from pathlib import Path
+from itertools import islice
 
-def load_pairs(filename):
-    """
-    Args:
-        filename (str): name of input file
+# 1) Read pairs from a file (two strings per non-empty line, whitespace-separated)
+def load_pairs(filename: str) -> List[Tuple[str, str]]:
+    pairs: List[Tuple[str, str]] = []
+    with open(filename, "r", encoding="utf-8") as infile:
+        for lineno, raw in enumerate(infile, start=1):
+            line = raw.strip()
+            if not line:
+                continue
+            parts = line.split()
+            if len(parts) != 2:
+                raise ValueError(
+                    f"Line {lineno}: expected 2 items, got {len(parts)} in {raw!r}"
+                )
+            a, b = parts
+            pairs.append((a, b))
+    return pairs
 
-    Returns:
-        List of pairs, where each pair is a Tuple of two strings
+# 2) Build directory
+def make_friends_directory(pairs: List[Tuple[str, str]]) -> Dict[str, Set[str]]:
+    d: Dict[str, Set[str]] = {}
+    for a, b in pairs:
+        if a == b:
+            continue
+        d.setdefault(a, set()).add(b)
+        d.setdefault(b, set()).add(a)
+    return d
 
-    Notes:
-    - Each non-empty line in the input file contains two strings, that
-      are separated by one or more space characters.
-    - You should remove whitespace characters, and skip over empty input lines.
-    """
-    list_of_pairs = []
-    with open(filename, 'rt') as infile:
+# 3) List (person, numberoffriends) sorted by descending count and name
+def find_all_number_of_friends(my_dir: Dict[str, Set[str]]) -> List[Tuple[str, int]]:
+    counts = [(person, len(friends)) for person, friends in my_dir.items()]
+    counts.sort(key=lambda t: (-t[1], t[0]))
+    return counts
 
-# ------------ BEGIN YOUR CODE ------------
-
-        
-        pass    # implement your code here
-
-
-# ------------ END YOUR CODE ------------
-
-    return list_of_pairs 
-
-def make_friends_directory(pairs):
-    """Create a directory of persons, for looking up immediate friends
-
-    Args:
-        pairs (List[Tuple[str, str]]): list of pairs
-
-    Returns:
-        Dict[str, Set] where each key is a person, with value being the set of 
-        related persons given in the input list of pairs
-
-    Notes:
-    - you should infer from the input that relationships are two-way: 
-      if given a pair (x,y), then assume that y is a friend of x, and x is 
-      a friend of y
-    - no own-relationships: ignore pairs of the form (x, x)
-    """
-    directory = dict()
-
-    # ------------ BEGIN YOUR CODE ------------
-
-    
-    pass    # implement your code here
-
-
-    # ------------ END YOUR CODE ------------
-
-    return directory
-
-
-def find_all_number_of_friends(my_dir):
-    """List every person in the directory by the number of friends each has
-
-    Returns a sorted (in decreasing order by number of friends) list 
-    of 2-tuples, where each tuples has the person's name as the first element,
-    the the number of friends as the second element.
-    """
-    friends_list = []
-
-    # ------------ BEGIN YOUR CODE ------------
-
-
-    pass    # implement your code here
-    
-
-    # ------------ END YOUR CODE ------------
-
-    return friends_list
-
-
-def make_team_roster(person, my_dir):
-    """Returns str encoding of a person's team of friends of friends
-    Args:
-        person (str): the team leader's name
-        my_dir (Dict): dictionary of all relationships
-
-    Returns:
-        str of the form 'A_B_D_G' where the underscore '_' is the
-        separator character, and the first substring is the 
-        team leader's name, i.e. A.  Subsequent unique substrings are 
-        friends of A or friends of friends of A, in ASCII order
-        and excluding the team leader's name (i.e. A only appears
-        as the first substring)
-
-    Notes:
-    - Team is drawn from only within two circles of A -- friends of A, plus 
-      their immediate friends only
-    """
+# 4) Team roster: leader and (friends and friends-of-friends), ASCII
+def make_team_roster(person: str, my_dir: Dict[str, Set[str]]) -> str:
     assert person in my_dir
-    label = person
+    first_deg = set(my_dir.get(person, set()))
+    second_deg: Set[str] = set()
+    for f in first_deg:
+        second_deg.update(my_dir.get(f, set()))
+    team = (first_deg | second_deg) - {person}
+    return "_".join([person] + sorted(team))
 
-    # ------------ BEGIN YOUR CODE ------------
+# 5) Smallest team label
+def find_smallest_team(my_dir: Dict[str, Set[str]]) -> str:
+    if not my_dir:
+        raise ValueError("my_dir is empty; build it first.")
+    size_label = []
+    for person in my_dir:
+        label = make_team_roster(person, my_dir)
+        size = len(label.split("_"))  # leader + tail
+        size_label.append((size, label))
+    _, best_label = min(size_label, key=lambda t: (t[0], t[1]))
+    return best_label
 
-    
-    pass    # implement your code here
+# 6) Iterator over unique friendships
+def myfriends(my_dir: Dict[str, Set[str]]) -> Iterator[Tuple[str, str]]:
+    for a in sorted(my_dir):
+        for b in sorted(my_dir[a]):
+            if a < b:
+                yield (a, b)
 
+# 7) Runner that prints each part
+def main() -> None:
+    here = Path(__file__).resolve().parent
+    for name in ("myfriends.txt", "Friends", "Friends.txt"):
+        data = here / name
+        if data.exists():
+            break
+    else:
+        print("❌ Could not find 'myfriends.txt' / 'Friends' / 'Friends.txt' next to", here)
+        print("   Files here:", [p.name for p in here.iterdir()])
+        return
 
-    # ------------ END YOUR CODE ------------
+    print("\n1. run load_pairs")
+    pairs = load_pairs(str(data))
+    print(pairs)
 
-    return label
+    print("\n2. run make_friends_directory")
+    my_dir = make_friends_directory(pairs)
+    print(my_dir)
 
-
-def find_smallest_team(my_dir):
-    """Find team with smallest size, and return its roster label str
-    - if ties, return the team roster label that is first in ASCII order
-    """
-    smallest_teams = []
-
-    # ------------ BEGIN YOUR CODE
-
-
-    pass    # implement your code here
-
-    
-    # ------------ END YOUR CODE
-
-    return smallest_teams[0] if smallest_teams else ""
-
-
-
-if __name__ == '__main__':
-    # To run and examine your function calls
-
-    print('\n1. run load_pairs')
-    my_pairs = load_pairs('myfriends.txt')
-    print(my_pairs)
-
-    print('\n2. run make_friends_directory')
-    my_dir = make_friends_directory(my_pairs)
-    print(my_dir) 
-
-    print('\n3. run find_all_number_of_friends')
+    print("\n3. run find_all_number_of_friends")
     print(find_all_number_of_friends(my_dir))
 
-    print('\n4. run make_team_roster')
-    my_person = 'DARTHVADER'   # test with this person as team leader
-    team_roster = make_team_roster(my_person, my_dir)
-    print(team_roster) 
+    print("\n4. run make_team_roster")
+    leader = "DARTHVADER" if "DARTHVADER" in my_dir else next(iter(my_dir))
+    print(make_team_roster(leader, my_dir))
 
-    print('\n5. run find_smallest_team')
+    print("\n5. run find_smallest_team")
     print(find_smallest_team(my_dir))
 
-    print('\n6. run Friends iterator')
-    friends_iterator = Friends(my_dir)
-    for num, pair in enumerate(friends_iterator):
+    print("\n6. run myfriends iterator (first 20)")
+    for num, pair in enumerate(islice(myfriends(my_dir), 20)):
         print(num, pair)
-        if num == 10:
-            break
-    # since index 0 we read 11 elements
-    print(len(list(friends_iterator)) + num + 1)
+    total = sum(1 for _ in myfriends(my_dir))
+    print("total unique friendships:", total)
+
+if __name__ == "__main__":
+    main()
